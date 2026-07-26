@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   HeartPulse, Sparkles, Star, MapPin, Calendar, Video, 
   Check, X, FileText, ClipboardList, CheckCircle2, User, 
-  ArrowRight, ShieldAlert 
+  ArrowRight, ShieldAlert, Loader2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -72,6 +72,27 @@ const mockPatients = [
 export default function DoctorsHubPage() {
   const [activeTab, setActiveTab] = useState<"parent" | "doctor">("parent");
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const [subscription, setSubscription] = useState<string>("Premium");
+  const [isUpgrading, setIsUpgrading] = useState(false);
+
+  useEffect(() => {
+    const sub = localStorage.getItem("kiddoai_subscription");
+    if (sub) {
+      setSubscription(sub);
+    }
+  }, []);
+
+  const handleUpgrade = () => {
+    setIsUpgrading(true);
+    setTimeout(() => {
+      setIsUpgrading(false);
+      setSubscription("Family");
+      localStorage.setItem("kiddoai_subscription", "Family");
+      window.location.reload();
+    }, 1500);
+  };
+
+  const isLocked = subscription !== "Family";
   
   // Booking Form State
   const [bookingDate, setBookingDate] = useState("2026-07-28");
@@ -91,11 +112,13 @@ export default function DoctorsHubPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/30 dark:bg-[#081225]/30">
+    <div className="relative min-h-[75vh]">
       <Topbar 
         title="Pediatric Clinic Hub" 
         subtitle="Premium medical-level features. Match specialists based on behavioral signals, or login as a clinician." 
       />
+
+      <div className={isLocked ? "transition-all duration-500 blur-md pointer-events-none select-none opacity-40" : "transition-all duration-500"}>
 
       {/* Tabs Switcher */}
       <div className="flex bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl max-w-md mb-8">
@@ -475,6 +498,45 @@ export default function DoctorsHubPage() {
           </div>
         )}
       </AnimatePresence>
+      </div>
+
+      {/* Paywall Overlay */}
+      {isLocked && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center p-6 bg-slate-50/5 dark:bg-slate-950/10">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[#0b192e] border border-slate-800 text-white rounded-3xl p-8 max-w-md w-full shadow-2xl text-center flex flex-col items-center"
+          >
+            <div className="h-14 w-14 rounded-full bg-purple-500/10 text-purple-500 flex items-center justify-center mb-5 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
+              <HeartPulse size={28} />
+            </div>
+            
+            <h3 className="text-xl font-heading font-extrabold text-white">Doctor Clinic is Locked</h3>
+            <p className="text-slate-400 text-sm mt-3 leading-relaxed">
+              Matching child psychologists, ADHD specialists, pediatric clinics, and exportable medical report exports are only available on the **Family** plan.
+            </p>
+
+            <div className="w-full mt-6 space-y-3">
+              <button
+                onClick={handleUpgrade}
+                disabled={isUpgrading}
+                className="w-full bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 disabled:text-purple-300 font-semibold py-3.5 px-4 rounded-xl text-sm transition active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(168,85,247,0.3)]"
+              >
+                {isUpgrading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Unlocking Clinic...</span>
+                  </>
+                ) : (
+                  <span>Upgrade to Family ($19/mo)</span>
+                )}
+              </button>
+              <p className="text-[10px] text-slate-500">Instant unlock · Cancel anytime</p>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

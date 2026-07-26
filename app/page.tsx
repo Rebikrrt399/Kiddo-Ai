@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
-  Clock, MapPin, Sparkles, Check, Shield, Heart, MessageSquare, Activity, Brain
+  Clock, MapPin, Sparkles, Check, Shield, Heart, MessageSquare, Activity, Brain, X, Loader2, CheckCircle2
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 const features = [
   { 
@@ -41,6 +42,14 @@ const plans = [
 ];
 
 export default function LandingPage() {
+  const [checkoutPlan, setCheckoutPlan] = useState<typeof plans[0] | null>(null);
+  const [email, setEmail] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
   return (
     <div className="min-h-screen bg-white dark:bg-[#081225] transition-colors duration-300">
       {/* Navbar */}
@@ -328,62 +337,341 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="mx-auto max-w-6xl px-6 py-24 transition-colors duration-300">
-        <div className="text-center max-w-xl mx-auto mb-16">
-          <h2 className="font-heading text-3xl font-extrabold text-[#0f274a] dark:text-white">Simple, transparent pricing</h2>
-          <p className="mt-3 text-slate-500 dark:text-slate-400">Choose the perfect plan to help support your family&apos;s digital health.</p>
+      <section id="pricing" className="relative overflow-hidden bg-gradient-to-br from-[#0c2b5c] via-[#164b8a] to-[#296cae] dark:from-[#06152b] dark:via-[#0c2b53] dark:to-[#17416e] text-white rounded-[2.5rem] border border-white/10 mx-auto max-w-6xl px-6 py-20 my-16 shadow-2xl transition-colors duration-300">
+        {/* Subtle grid pattern overlay */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem]"></div>
+
+        {/* Floating background blur blobs */}
+        <motion.div 
+          animate={{ 
+            y: [0, -25, 0], 
+            x: [0, 20, 0],
+            scale: [1, 1.15, 1]
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-blue-400/20 blur-3xl pointer-events-none"
+        />
+        <motion.div 
+          animate={{ 
+            y: [0, 25, 0], 
+            x: [0, -20, 0],
+            scale: [1, 1.1, 1]
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1.5
+          }}
+          className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl pointer-events-none"
+        />
+
+        <div className="relative text-center max-w-xl mx-auto mb-16 z-10">
+          <motion.h2 
+            initial={{ opacity: 0, y: -20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, type: "spring", stiffness: 100 }}
+            className="font-heading text-3xl font-extrabold text-white"
+          >
+            Simple, transparent pricing
+          </motion.h2>
+          <motion.p 
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="mt-3 text-blue-100/80"
+          >
+            Choose the perfect plan to help support your family&apos;s digital health.
+          </motion.p>
         </div>
         
-        <div className="grid gap-8 md:grid-cols-3 items-stretch">
-          {plans.map((p, i) => (
-            <motion.div
-              key={p.name}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              className={`rounded-3xl border p-8 flex flex-col justify-between transition duration-300 ${
-                p.highlight 
-                  ? "border-[#0c2b5c] dark:border-blue-500 bg-blue-50/10 dark:bg-blue-950/10 shadow-md relative scale-105" 
-                  : "border-slate-100 dark:border-slate-800/40 bg-white dark:bg-[#0f1f38] shadow-sm hover:shadow-md"
-              }`}
-            >
-              {p.highlight && (
-                <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#0c2b5c] dark:bg-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                  Most Popular
-                </span>
-              )}
-              <div>
-                <p className="font-heading text-xl font-bold text-[#0f274a] dark:text-white">{p.name}</p>
-                <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-4xl font-extrabold text-slate-900 dark:text-white">{p.price.split("/")[0]}</span>
-                  {p.price !== "$0" && <span className="text-sm text-slate-500 dark:text-slate-400">/{p.price.split("/")[1]}</span>}
+        <div className="relative grid gap-8 md:grid-cols-3 items-stretch px-2 md:px-4 z-10">
+          {plans.map((p, i) => {
+            const isPremium = p.name === "Premium";
+            return (
+              <motion.div
+                key={p.name}
+                initial={{ opacity: 0, y: 35 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: i * 0.15, type: "spring", stiffness: 90 }}
+                whileHover={{ 
+                  y: isPremium ? -12 : -8, 
+                  scale: isPremium ? 1.06 : 1.03,
+                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.4)"
+                }}
+                whileTap={{ scale: 0.98 }}
+                className={`backdrop-blur-md rounded-3xl p-8 flex flex-col justify-between transition-colors duration-300 ${
+                  isPremium 
+                    ? "bg-white/20 dark:bg-white/15 border-2 border-white/50 shadow-2xl relative md:-translate-y-2 scale-105" 
+                    : "bg-white/10 dark:bg-white/5 border border-white/20 shadow-lg"
+                }`}
+              >
+                {isPremium && (
+                  <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-white text-[#0c2b5c] text-[10px] font-extrabold px-4 py-1.5 rounded-full uppercase tracking-wider shadow-lg">
+                    Most Popular
+                  </span>
+                )}
+                <div>
+                  <p className="font-heading text-xl font-bold text-white">{p.name}</p>
+                  <div className="mt-4 flex items-baseline gap-1">
+                    <span className="text-4xl font-extrabold text-white">{p.price.split("/")[0]}</span>
+                    {p.price !== "$0" && <span className="text-sm text-blue-200/80">/{p.price.split("/")[1]}</span>}
+                  </div>
+                  
+                  <motion.ul 
+                    variants={{
+                      hidden: { opacity: 0 },
+                      show: {
+                        opacity: 1,
+                        transition: {
+                          staggerChildren: 0.08,
+                          delayChildren: 0.3 + (i * 0.1)
+                        }
+                      }
+                    }}
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={{ once: true }}
+                    className="mt-8 space-y-4"
+                  >
+                    {p.features.map((f) => (
+                      <motion.li 
+                        key={f} 
+                        variants={{
+                          hidden: { opacity: 0, x: -10 },
+                          show: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 120 } }
+                        }}
+                        className="flex items-start gap-3 text-sm text-blue-50/90"
+                      >
+                        <motion.div 
+                          whileHover={{ scale: 1.2, rotate: 10 }}
+                          className="text-blue-300 shrink-0 mt-0.5"
+                        >
+                          <Check size={16} strokeWidth={3} />
+                        </motion.div> 
+                        <span>{f}</span>
+                      </motion.li>
+                    ))}
+                  </motion.ul>
                 </div>
-                <ul className="mt-8 space-y-4">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex items-start gap-3 text-sm text-slate-600 dark:text-slate-300">
-                      <div className="rounded-full bg-emerald-500/10 p-0.5 mt-0.5 text-emerald-500 shrink-0">
-                        <Check size={12} strokeWidth={3} />
-                      </div> 
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              
-              <Link href="/dashboard" className="w-full mt-8">
-                <button className={`w-full py-3 px-4 rounded-xl text-sm font-semibold transition active:scale-[0.98] ${
-                  p.highlight 
-                    ? "bg-[#0c2b5c] dark:bg-blue-500 text-white hover:brightness-110 shadow-sm" 
-                    : "border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                }`}>
+                
+                <motion.button 
+                  onClick={() => setCheckoutPlan(p)}
+                  whileHover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0,0,0,0.2)" }}
+                  whileTap={{ scale: 0.97 }}
+                  className={`w-full py-3.5 px-4 mt-8 rounded-xl text-sm font-semibold transition active:scale-[0.98] ${
+                    isPremium 
+                      ? "bg-white text-[#0c2b5c] hover:bg-blue-50 shadow-md font-bold" 
+                      : "border border-white/40 hover:bg-white/10 text-white bg-transparent"
+                  }`}
+                >
                   Choose {p.name}
-                </button>
-              </Link>
-            </motion.div>
-          ))}
+                </motion.button>
+              </motion.div>
+            );
+          })}
         </div>
       </section>
+
+      {/* Checkout Modal */}
+      <AnimatePresence>
+        {checkoutPlan && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative bg-[#0b192e] border border-slate-800 text-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl overflow-hidden"
+            >
+              {/* Glow effects */}
+              <div className="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
+              <div className="absolute -bottom-24 -right-24 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
+
+              {!isSuccess ? (
+                <>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-xl font-heading font-extrabold text-white">Activate {checkoutPlan.name} Plan</h3>
+                      <p className="text-xs text-slate-400 mt-1">Configure details to unlock full features.</p>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setCheckoutPlan(null);
+                        setEmail("");
+                        setCardNumber("");
+                        setExpiry("");
+                        setCvv("");
+                        setIsProcessing(false);
+                      }}
+                      className="text-slate-400 hover:text-white bg-slate-800/40 p-1.5 rounded-lg transition"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+
+                  <div className="mt-5 bg-[#0d1e36]/50 border border-slate-800/80 rounded-2xl p-4 flex justify-between items-center">
+                    <div>
+                      <span className="text-xs text-slate-400 font-medium">Selected Subscription</span>
+                      <p className="text-sm font-bold text-white">{checkoutPlan.name}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs text-slate-400 font-medium">Total Price</span>
+                      <p className="text-base font-extrabold text-blue-400">{checkoutPlan.price}</p>
+                    </div>
+                  </div>
+
+                  <form 
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      setIsProcessing(true);
+                      setTimeout(() => {
+                        setIsProcessing(false);
+                        setIsSuccess(true);
+                        localStorage.setItem("kiddoai_subscription", checkoutPlan.name);
+                      }, 1800);
+                    }}
+                    className="mt-6 space-y-4"
+                  >
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-400 tracking-wider uppercase mb-1.5">
+                        Email Address
+                      </label>
+                      <input 
+                        type="email" 
+                        required
+                        placeholder="parent@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full bg-[#0d1e36]/75 border border-slate-850 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-4 py-3 text-sm outline-none text-white transition placeholder-slate-500"
+                      />
+                    </div>
+
+                    {checkoutPlan.name !== "Free" && (
+                      <>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-400 tracking-wider uppercase mb-1.5">
+                            Card Number
+                          </label>
+                          <input 
+                            type="text" 
+                            required
+                            placeholder="•••• •••• •••• ••••"
+                            maxLength={19}
+                            value={cardNumber}
+                            onChange={(e) => {
+                              const v = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+                              const matches = v.match(/\d{4,16}/g);
+                              const match = matches && matches[0] || '';
+                              const parts = [];
+                              for (let i=0, len=match.length; i<len; i+=4) {
+                                parts.push(match.substring(i, i+4));
+                              }
+                              if (parts.length > 0) {
+                                setCardNumber(parts.join(' '));
+                              } else {
+                                setCardNumber(v);
+                              }
+                            }}
+                            className="w-full bg-[#0d1e36]/75 border border-slate-850 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-4 py-3 text-sm outline-none text-white transition placeholder-slate-500"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-400 tracking-wider uppercase mb-1.5">
+                              Expiration Date
+                            </label>
+                            <input 
+                              type="text" 
+                              required
+                              placeholder="MM/YY"
+                              maxLength={5}
+                              value={expiry}
+                              onChange={(e) => {
+                                const v = e.target.value.replace(/\D/g,'');
+                                if (v.length > 2) {
+                                  setExpiry(v.substring(0,2) + '/' + v.substring(2,4));
+                                } else {
+                                  setExpiry(v);
+                                }
+                              }}
+                              className="w-full bg-[#0d1e36]/75 border border-slate-850 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-4 py-3 text-sm outline-none text-white transition placeholder-slate-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-400 tracking-wider uppercase mb-1.5">
+                              Security Code (CVV)
+                            </label>
+                            <input 
+                              type="password" 
+                              required
+                              placeholder="•••"
+                              maxLength={3}
+                              value={cvv}
+                              onChange={(e) => setCvv(e.target.value.replace(/\D/g,''))}
+                              className="w-full bg-[#0d1e36]/75 border border-slate-850 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-4 py-3 text-sm outline-none text-white transition placeholder-slate-500"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={isProcessing}
+                      className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:text-slate-300 font-semibold py-3.5 px-4 rounded-xl text-sm transition active:scale-[0.98] flex items-center justify-center gap-2 mt-2 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          <span>Processing activation...</span>
+                        </>
+                      ) : (
+                        <span>Activate {checkoutPlan.name} Plan</span>
+                      )}
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <div className="text-center py-6">
+                  <motion.div 
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                    className="inline-flex items-center justify-center h-16 w-16 bg-emerald-500/10 text-emerald-500 rounded-full border border-emerald-500/20 mb-5"
+                  >
+                    <CheckCircle2 size={36} />
+                  </motion.div>
+                  
+                  <h3 className="text-2xl font-heading font-extrabold text-white">Plan Activated!</h3>
+                  <p className="text-slate-300 text-sm mt-3 px-2 max-w-sm mx-auto leading-relaxed">
+                    You have successfully subscribed to the <span className="font-bold text-white">{checkoutPlan.name}</span> plan. Your parent dashboard is now updated.
+                  </p>
+
+                  <Link href="/dashboard" className="block w-full mt-8">
+                    <button 
+                      onClick={() => {
+                        setCheckoutPlan(null);
+                        setIsSuccess(false);
+                      }}
+                      className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3.5 px-4 rounded-xl text-sm transition active:scale-[0.98] shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                    >
+                      Go to Parent Dashboard
+                    </button>
+                  </Link>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* FAQ Section */}
       <section id="faq" className="mx-auto max-w-4xl px-6 py-16 pb-28 transition-colors duration-300">

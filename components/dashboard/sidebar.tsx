@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import {
   LayoutGrid,
@@ -33,6 +34,15 @@ const nav = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [subscription, setSubscription] = useState<string>("Premium");
+
+  useEffect(() => {
+    // Read subscription from localStorage (default to Premium for mock display if not set)
+    const sub = localStorage.getItem("kiddoai_subscription");
+    if (sub) {
+      setSubscription(sub);
+    }
+  }, []);
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card/40 p-5 lg:flex">
@@ -43,13 +53,28 @@ export function Sidebar() {
         <span className="font-heading text-lg font-semibold">KiddoAI</span>
       </Link>
 
-      <div className="mb-6 flex items-center gap-3 rounded-xl border border-border bg-background/60 p-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary/15 text-lg">
-          {child.avatar}
+      <div className="mb-6 flex flex-col gap-3 rounded-xl border border-border bg-background/60 p-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary/15 text-lg shrink-0">
+            {child.avatar}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{child.name}</p>
+            <p className="truncate text-[10px] text-muted">{child.device}</p>
+          </div>
         </div>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{child.name}</p>
-          <p className="truncate text-xs text-muted">{child.device}</p>
+
+        {/* Subscription Plan Badge */}
+        <div className="border-t border-border/50 pt-2 flex items-center justify-between">
+          <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">Plan</span>
+          <span className={cn(
+            "text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider transition-all duration-300",
+            subscription === "Free" && "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+            subscription === "Premium" && "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/15",
+            subscription === "Family" && "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/15"
+          )}>
+            {subscription}
+          </span>
         </div>
       </div>
 
