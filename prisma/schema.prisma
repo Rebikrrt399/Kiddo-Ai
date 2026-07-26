@@ -1,0 +1,142 @@
+// Reference schema for the intended data model.
+// NOT wired up in this MVP build (which runs on in-memory mock data in lib/mock-data.ts).
+// To go live: `npm install prisma @prisma/client`, set DATABASE_URL, then `npx prisma migrate dev`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PARENT
+  CHILD
+  ADMIN
+  DOCTOR
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      Role
+  createdAt DateTime @default(now())
+
+  parentOf  Child[]  @relation("ParentChildren")
+}
+
+model Child {
+  id             String   @id @default(cuid())
+  name           String
+  age            Int
+  wellbeingScore Int      @default(0)
+  parent         User     @relation("ParentChildren", fields: [parentId], references: [id])
+  parentId       String
+
+  devices     Device[]
+  screenTime  ScreenTime[]
+  appUsage    AppUsage[]
+  moods       Mood[]
+  locations   Location[]
+  riskEvents  RiskEvent[]
+  chats       Chat[]
+  reports     Report[]
+}
+
+model Device {
+  id        String   @id @default(cuid())
+  childId   String
+  child     Child    @relation(fields: [childId], references: [id])
+  platform  String
+  model     String
+  lastSeen  DateTime @default(now())
+}
+
+model ScreenTime {
+  id            String   @id @default(cuid())
+  childId       String
+  child         Child    @relation(fields: [childId], references: [id])
+  date          DateTime
+  totalMinutes  Int
+  education     Int
+  social        Int
+  gaming        Int
+  entertainment Int
+}
+
+model AppUsage {
+  id         String   @id @default(cuid())
+  childId    String
+  child      Child    @relation(fields: [childId], references: [id])
+  appName    String
+  minutes    Int
+  date       DateTime
+}
+
+model Mood {
+  id      String   @id @default(cuid())
+  childId String
+  child   Child    @relation(fields: [childId], references: [id])
+  emoji   String
+  score   Int
+  date    DateTime
+}
+
+model Location {
+  id        String   @id @default(cuid())
+  childId   String
+  child     Child    @relation(fields: [childId], references: [id])
+  latitude  Float
+  longitude Float
+  placeName String?
+  event     String   // e.g. "Left School", "Reached Home"
+  timestamp DateTime @default(now())
+}
+
+model RiskEvent {
+  id              String    @id @default(cuid())
+  childId         String
+  child           Child     @relation(fields: [childId], references: [id])
+  title           String
+  detail          String
+  level           RiskLevel
+  confidence      Int
+  suggestedAction String
+  createdAt       DateTime  @default(now())
+}
+
+model Chat {
+  id        String   @id @default(cuid())
+  childId   String
+  child     Child    @relation(fields: [childId], references: [id])
+  role      String   // "user" | "assistant"
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model Report {
+  id        String   @id @default(cuid())
+  childId   String
+  child     Child    @relation(fields: [childId], references: [id])
+  period    String   // "weekly" | "monthly"
+  summary   String
+  createdAt DateTime @default(now())
+}
+
+model Referral {
+  id           String   @id @default(cuid())
+  userId       String
+  code         String   @unique
+  invitedCount Int      @default(0)
+  createdAt    DateTime @default(now())
+}
