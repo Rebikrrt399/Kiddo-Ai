@@ -101,7 +101,13 @@ export default function LandingPage() {
           {/* Right Actions */}
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <Link href="/dashboard">
+            <Link
+              href="/signin"
+              className="hidden text-xs font-semibold text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 sm:inline-flex"
+            >
+              Sign in
+            </Link>
+            <Link href="/signup">
               <button className="bg-[#0f274a] hover:bg-slate-800 text-white dark:bg-white dark:hover:bg-slate-100 dark:text-[#0f274a] px-5 py-2.5 rounded-full text-xs font-semibold shadow-sm transition active:scale-95">
                 Get Early Access
               </button>
