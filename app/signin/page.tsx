@@ -61,7 +61,7 @@ export default function SignInPage() {
           </div>
         </div>
 
-        <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70 dark:border-slate-800 dark:bg-[#0f1f38] dark:shadow-black/20 sm:p-8">
+        <div className="rounded-4xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70 dark:border-slate-800 dark:bg-[#0f1f38] dark:shadow-black/20 sm:p-8">
           <div>
             <h2 className="font-heading text-2xl font-extrabold text-[#0f274a] dark:text-white">Sign in</h2>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
