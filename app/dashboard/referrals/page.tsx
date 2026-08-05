@@ -4,10 +4,9 @@ import { useState } from "react";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
-  Gift, Copy, Check, Share2, Users, Award, HelpCircle, 
+  Gift, Copy, Check, Users, Award, 
   Send, Mail, MessageSquare 
 } from "lucide-react";
-import { motion } from "framer-motion";
 
 const milestones = [
   { count: 1, label: "1 Month Free Premium", reached: true },

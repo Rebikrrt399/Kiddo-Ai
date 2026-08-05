@@ -223,7 +223,7 @@ export default function ParentingVideosPage() {
                   {/* Subtitle */}
                   {v.subtitle && (
                     <p className="text-xs font-medium text-blue-600 dark:text-blue-300 mt-1 line-clamp-2 italic">
-                      "{v.subtitle}"
+                      &quot;{v.subtitle}&quot;
                     </p>
                   )}
 
@@ -339,7 +339,7 @@ export default function ParentingVideosPage() {
 
                     {activeVideo.subtitle && (
                       <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-2 italic">
-                        "{activeVideo.subtitle}"
+                        &quot;{activeVideo.subtitle}&quot;
                       </p>
                     )}
 
