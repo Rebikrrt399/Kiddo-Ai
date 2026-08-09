@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowRight, Baby, CheckCircle2, Eye, EyeOff, HeartPulse, Loader2, LockKeyhole, Mail, Shield, Sparkles, User, Users } from "lucide-react";
+import { ArrowRight, Baby, CheckCircle2, Eye, EyeOff, HeartPulse, Loader2, LockKeyhole, Mail, Shield, ShieldCheck, Sparkles, User, Users } from "lucide-react";
 import { roleDashboardHref, saveRole, type UserRole } from "@/lib/role-auth";
 import { signUpUser, signInWithGoogle } from "@/lib/supabase";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -31,7 +31,15 @@ const roles = [
     icon: Baby,
     tone: "border-emerald-500/80 bg-emerald-50/90 text-emerald-950 dark:bg-emerald-950/40 dark:border-emerald-500/70 dark:text-emerald-100 ring-2 ring-emerald-500/20",
   },
+  {
+    id: "admin" as const,
+    title: "I'm an Admin",
+    description: "Manage system health, platform metrics, and user accounts.",
+    icon: ShieldCheck,
+    tone: "border-purple-500/80 bg-purple-50/90 text-purple-950 dark:bg-purple-950/40 dark:border-purple-500/70 dark:text-purple-100 ring-2 ring-purple-500/20",
+  },
 ];
+
 
 // Official 4-Color Google Logo SVG
 function GoogleIcon({ className = "h-5 w-5" }: { className?: string }) {
@@ -210,7 +218,7 @@ export default function SignUpPage() {
             </div>
 
             {/* Role Options */}
-            <div className="mt-6 grid gap-2.5">
+            <div className="mt-6 grid gap-2.5 sm:grid-cols-2">
               {roles.map(({ id, title, description, icon: Icon, tone }) => {
                 const active = selectedRole === id;
                 return (

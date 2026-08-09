@@ -9,7 +9,7 @@ import { getRegisteredRole, roleDashboardHref, roleLabels, saveRole, type UserRo
 import { signInUser, signInWithGoogle, signInWithOAuthProvider } from "@/lib/supabase";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-const roles: UserRole[] = ["parent", "doctor", "child"];
+const roles: UserRole[] = ["parent", "doctor", "child", "admin"];
 
 // Official 4-Color Google Logo SVG
 function GoogleIcon({ className = "h-5 w-5" }: { className?: string }) {
@@ -205,7 +205,7 @@ export default function SignInPage() {
             </div>
 
             {/* Role Switcher */}
-            <div className="mt-6 grid grid-cols-3 gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700/70 dark:bg-slate-800/70">
+            <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700/70 dark:bg-slate-800/70">
               {roles.map((role) => (
                 <button
                   key={role}
