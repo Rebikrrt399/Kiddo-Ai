@@ -168,7 +168,7 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error("Failed to fetch users:", err);
-    } font-semibold finally {
+    } finally {
       setLoading(false);
     }
   };
