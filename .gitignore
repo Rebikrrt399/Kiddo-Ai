@@ -5,4 +5,5 @@ build
 .ds_store
 *.tsbuildinfo
 .env*.local
-
+*.tgz
+.dev/
