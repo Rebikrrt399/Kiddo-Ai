@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -31,80 +31,44 @@ import {
   Clock,
   MoreVertical,
   X,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RoleGate } from "@/components/role-gate";
 import { signOutUser } from "@/lib/supabase";
-import { type UserRole, roleLabels } from "@/lib/role-auth";
-import { adminStats } from "@/lib/mock-data";
+import { type UserRole } from "@/lib/role-auth";
+import { adminStats, type SystemUser } from "@/lib/mock-data";
 
-interface AdminUser {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  status: "Active" | "Suspended" | "Pending";
-  subscription: "Free" | "Premium" | "Family";
-  joined: string;
+interface AdminStats {
+  kpis: {
+    totalUsers: number;
+    activeUsers: number;
+    suspendedUsers: number;
+    flaggedUsers: number;
+    childrenCount: number;
+    parentsCount: number;
+    activeSubscriptions: number;
+    monthlyRevenue: number;
+    riskAlertsToday: number;
+    modelAccuracy: number;
+  };
+  systemHealth: {
+    serverStatus: string;
+    uptime: string;
+    cpuUsage: string;
+    memoryUsage: string;
+    avgResponseTimeMs: number;
+    activeWebsockets: number;
+    lastDiagnosticRun: string;
+  };
+  subscriptionBreakdown: {
+    free: number;
+    premium: number;
+    family: number;
+  };
 }
-
-const initialUsers: AdminUser[] = [
-  {
-    id: "usr_101",
-    name: "Dr. Rajesh Varma",
-    email: "dr.varma@kiddoai.med",
-    role: "doctor",
-    status: "Active",
-    subscription: "Family",
-    joined: "2026-01-12",
-  },
-  {
-    id: "usr_102",
-    name: "Priya Sharma",
-    email: "priya.sharma@gmail.com",
-    role: "parent",
-    status: "Active",
-    subscription: "Premium",
-    joined: "2026-02-01",
-  },
-  {
-    id: "usr_103",
-    name: "Aarav Sharma",
-    email: "aarav.child@kiddoai.com",
-    role: "child",
-    status: "Active",
-    subscription: "Premium",
-    joined: "2026-02-01",
-  },
-  {
-    id: "usr_104",
-    name: "Admin Superuser",
-    email: "admin@kiddoai.com",
-    role: "admin",
-    status: "Active",
-    subscription: "Family",
-    joined: "2025-11-15",
-  },
-  {
-    id: "usr_105",
-    name: "Karan Patel",
-    email: "karan.patel@yahoo.com",
-    role: "parent",
-    status: "Suspended",
-    subscription: "Free",
-    joined: "2026-03-10",
-  },
-  {
-    id: "usr_106",
-    name: "Dr. Ananya Roy",
-    email: "ananya.roy@healthclinic.org",
-    role: "doctor",
-    status: "Active",
-    subscription: "Family",
-    joined: "2026-04-05",
-  },
-];
 
 interface PlatformAlert {
   id: string;
@@ -148,24 +112,29 @@ const initialAlerts: PlatformAlert[] = [
 
 export default function AdminPage() {
   const router = useRouter();
-  const [users, setUsers] = useState<AdminUser[]>(initialUsers);
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [users, setUsers] = useState<SystemUser[]>([]);
   const [alerts, setAlerts] = useState<PlatformAlert[]>(initialAlerts);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"users" | "alerts" | "diagnostics">("users");
 
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [roleFilter, setRoleFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+
+  // Diagnostics & Sweeps
+  const [isSweeping, setIsSweeping] = useState(false);
+  const [sweepMessage, setSweepMessage] = useState<string | null>(null);
+  const [updatingUser, setUpdatingUser] = useState<string | null>(null);
 
   // Add User Modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
-  const [newRole, setNewRole] = useState<UserRole>("parent");
-  const [newSub, setNewSub] = useState<"Free" | "Premium" | "Family">("Premium");
+  const [newRole, setNewRole] = useState<SystemUser["role"]>("PARENT");
+  const [newSub, setNewSub] = useState<SystemUser["subscription"]>("Premium");
 
-  // System Diagnostics state
-  const [isTesting, setIsTesting] = useState(false);
   const [diagnosticLogs, setDiagnosticLogs] = useState<string[]>([
     "✓ Supabase REST & Realtime API: Connected (18ms)",
     "✓ OpenAI GPT-4o-mini endpoint: Operational (210ms)",
@@ -173,94 +142,172 @@ export default function AdminPage() {
     "✓ Redis Session Cache: Synchronized",
   ]);
 
+  const fetchStats = async () => {
+    try {
+      const res = await fetch("/api/admin/stats");
+      if (res.ok) {
+        const data = await res.json();
+        setStats(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch admin stats:", err);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (searchQuery) params.set("query", searchQuery);
+      if (roleFilter !== "ALL") params.set("role", roleFilter);
+      if (statusFilter !== "ALL") params.set("status", statusFilter);
+
+      const res = await fetch(`/api/admin/users?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data.users || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+    fetchUsers();
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchUsers();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, roleFilter, statusFilter]);
+
   async function handleSignOut() {
     await signOutUser();
     router.push("/signin");
   }
 
-  function handleAddUser(e: React.FormEvent) {
+  const handleUpdateStatus = async (userId: string, newStatus: SystemUser["status"]) => {
+    setUpdatingUser(userId);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, status: newStatus }),
+      });
+      if (res.ok) {
+        await fetchUsers();
+        await fetchStats();
+      }
+    } catch (err) {
+      console.error("Failed to update status:", err);
+    } finally {
+      setUpdatingUser(null);
+    }
+  };
+
+  const handleUpdateRole = async (userId: string, newRole: SystemUser["role"]) => {
+    setUpdatingUser(userId);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, role: newRole }),
+      });
+      if (res.ok) {
+        await fetchUsers();
+        await fetchStats();
+      }
+    } catch (err) {
+      console.error("Failed to update role:", err);
+    } finally {
+      setUpdatingUser(null);
+    }
+  };
+
+  const handleUpdateSubscription = async (userId: string, subscription: SystemUser["subscription"]) => {
+    setUpdatingUser(userId);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, subscription }),
+      });
+      if (res.ok) {
+        await fetchUsers();
+        await fetchStats();
+      }
+    } catch (err) {
+      console.error("Failed to update subscription:", err);
+    } finally {
+      setUpdatingUser(null);
+    }
+  };
+
+  const handleRunDiagnostic = async () => {
+    setIsSweeping(true);
+    setSweepMessage(null);
+    try {
+      const res = await fetch("/api/admin/system", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sweep" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSweepMessage(data.message || "Diagnostic sweep finished.");
+        setDiagnosticLogs((prev) => [
+          `[${new Date().toLocaleTimeString()}] Diagnostic sweep completed successfully.`,
+          `✓ Server telemetry response: 200 OK`,
+          ...prev,
+        ]);
+        await fetchStats();
+      }
+    } catch (err) {
+      console.error("Failed to run diagnostic:", err);
+    } finally {
+      setIsSweeping(false);
+    }
+  };
+
+  const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName || !newEmail) return;
 
-    const newUser: AdminUser = {
-      id: "usr_" + Math.floor(1000 + Math.random() * 9000),
-      name: newName.trim(),
-      email: newEmail.trim(),
-      role: newRole,
-      status: "Active",
-      subscription: newSub,
-      joined: new Date().toISOString().split("T")[0],
-    };
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newName,
+          email: newEmail,
+          role: newRole,
+          subscription: newSub,
+          status: "Active",
+        }),
+      });
 
-    setUsers([newUser, ...users]);
-    setNewName("");
-    setNewEmail("");
-    setIsAddModalOpen(false);
-  }
-
-  function toggleUserStatus(id: string) {
-    setUsers(
-      users.map((u) => {
-        if (u.id === id) {
-          const nextStatus = u.status === "Active" ? "Suspended" : "Active";
-          return { ...u, status: nextStatus };
-        }
-        return u;
-      })
-    );
-  }
-
-  function updateUserRole(id: string, role: UserRole) {
-    setUsers(
-      users.map((u) => (u.id === id ? { ...u, role } : u))
-    );
-  }
-
-  function updateUserSubscription(id: string, subscription: "Free" | "Premium" | "Family") {
-    setUsers(
-      users.map((u) => (u.id === id ? { ...u, subscription } : u))
-    );
-  }
-
-  function deleteUser(id: string) {
-    if (confirm("Are you sure you want to remove this user profile from KiddoAI system?")) {
-      setUsers(users.filter((u) => u.id !== id));
+      if (res.ok) {
+        await fetchUsers();
+        await fetchStats();
+        setNewName("");
+        setNewEmail("");
+        setIsAddModalOpen(false);
+      }
+    } catch (err) {
+      console.error("Failed to add user:", err);
     }
-  }
+  };
 
-  function handleAlertAction(alertId: string, nextStatus: "Acknowledged" | "Resolved") {
-    setAlerts(
-      alerts.map((a) => (a.id === alertId ? { ...a, status: nextStatus } : a))
-    );
-  }
+  const handleAlertAction = (alertId: string, nextStatus: "Acknowledged" | "Resolved") => {
+    setAlerts(alerts.map((a) => (a.id === alertId ? { ...a, status: nextStatus } : a)));
+  };
 
-  function runDiagnostics() {
-    setIsTesting(true);
-    setTimeout(() => {
-      setDiagnosticLogs((prev) => [
-        `[${new Date().toLocaleTimeString()}] Diagnostic check triggered by Admin.`,
-        `✓ Supabase Auth latency: 14ms`,
-        `✓ Vector Database Index: Ready (100% synchronized)`,
-        `✓ Pediatric Guardrails & Safety Filter: Passed 42 unit checks`,
-        ...prev,
-      ]);
-      setIsTesting(false);
-    }, 1200);
-  }
-
-  // Filtered Users
-  const filteredUsers = users.filter((u) => {
-    const matchesSearch =
-      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === "all" || u.role === roleFilter;
-    const matchesStatus = statusFilter === "all" || u.status === statusFilter;
-    return matchesSearch && matchesRole && matchesStatus;
-  });
-
-  // Calculate live stats
-  const totalUsersCount = adminStats.totalUsers + (users.length - initialUsers.length);
-  const activeSubsCount = users.filter((u) => u.subscription !== "Free").length;
+  const kpis = stats?.kpis;
+  const sysHealth = stats?.systemHealth;
 
   return (
     <RoleGate allowedRole="admin">
@@ -285,16 +332,20 @@ export default function AdminPage() {
 
               <span className="hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 md:inline-flex">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Operational · 99.9%
+                Operational · {sysHealth?.uptime || "99.9%"}
               </span>
             </div>
 
             {/* Right Header Actions */}
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100/70 px-3 py-1 text-xs dark:border-slate-700 dark:bg-slate-800/60">
-                <Shield size={14} className="text-purple-600 dark:text-purple-400" />
-                <span className="font-semibold text-slate-700 dark:text-slate-200">Admin Account</span>
-              </div>
+              <button
+                onClick={handleRunDiagnostic}
+                disabled={isSweeping}
+                className="hidden sm:flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 text-xs font-bold transition shadow-sm disabled:opacity-50"
+              >
+                <RefreshCw size={14} className={isSweeping ? "animate-spin" : ""} />
+                <span>{isSweeping ? "Sweeping..." : "AI Diagnostic Sweep"}</span>
+              </button>
 
               <ThemeToggle />
 
@@ -309,15 +360,22 @@ export default function AdminPage() {
           </div>
         </header>
 
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 space-y-8">
+          {sweepMessage && (
+            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 shrink-0" />
+              <span>{sweepMessage}</span>
+            </div>
+          )}
+
           {/* Executive Overview KPI Grid */}
-          <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card className="relative overflow-hidden border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-[#0c1f3d]">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Registered Users</p>
                   <p className="mt-1 font-heading text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                    {totalUsersCount.toLocaleString()}
+                    {kpis ? kpis.totalUsers.toLocaleString() : adminStats.totalUsers.toLocaleString()}
                   </p>
                   <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                     <TrendingUp size={12} /> +12.4% this month
@@ -334,10 +392,10 @@ export default function AdminPage() {
                 <div>
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Active Subscriptions</p>
                   <p className="mt-1 font-heading text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                    {activeSubsCount} profiles
+                    {kpis ? kpis.activeSubscriptions : 48} profiles
                   </p>
                   <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-purple-600 dark:text-purple-400">
-                    <CreditCard size={12} /> ${adminStats.monthlyRevenue.toLocaleString()} MRR
+                    <CreditCard size={12} /> ${kpis ? kpis.monthlyRevenue.toLocaleString() : adminStats.monthlyRevenue.toLocaleString()} MRR
                   </span>
                 </div>
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-purple-50 text-purple-600 dark:bg-purple-950/60 dark:text-purple-400">
@@ -351,7 +409,7 @@ export default function AdminPage() {
                 <div>
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Risk Alerts Today</p>
                   <p className="mt-1 font-heading text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                    {alerts.filter((a) => a.status === "Open").length} open
+                    {kpis ? kpis.riskAlertsToday : alerts.filter((a) => a.status === "Open").length} open
                   </p>
                   <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
                     <AlertTriangle size={12} /> {alerts.length} total flagged
@@ -368,10 +426,10 @@ export default function AdminPage() {
                 <div>
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400">AI Model Accuracy</p>
                   <p className="mt-1 font-heading text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                    {adminStats.modelAccuracy}%
+                    {kpis ? `${kpis.modelAccuracy}%` : `${adminStats.modelAccuracy}%`}
                   </p>
                   <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                    <Activity size={12} /> 18ms response latency
+                    <Activity size={12} /> {sysHealth?.avgResponseTimeMs || 42}ms latency
                   </span>
                 </div>
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
@@ -381,8 +439,34 @@ export default function AdminPage() {
             </Card>
           </div>
 
-          {/* Tab Navigation Controls */}
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3 dark:border-slate-800">
+          {/* Quick Doctor Hub Launcher Banner */}
+          <Card className="p-6 bg-white dark:bg-[#0c1f3d] border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center shrink-0">
+                <HeartPulse size={20} />
+              </div>
+              <div>
+                <h3 className="font-heading text-sm font-bold text-slate-900 dark:text-white">
+                  Pediatric Clinic & Doctor Suggestion Hub
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Backend API route <code className="text-purple-500 font-mono">/api/doctors/suggestions</code> ready for child mood & behavioral analytics.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/doctor"
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+              >
+                <HeartPulse size={14} />
+                <span>Open Doctor View</span>
+              </Link>
+            </div>
+          </Card>
+
+          {/* Tab Controls */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3 dark:border-slate-800">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setActiveTab("users")}
@@ -422,7 +506,7 @@ export default function AdminPage() {
                 }`}
               >
                 <Server size={16} />
-                <span>System Diagnostics</span>
+                <span>System Telemetry & Diagnostics</span>
               </button>
             </div>
 
@@ -448,7 +532,7 @@ export default function AdminPage() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search user name or email..."
+                    placeholder="Search user, email, ID..."
                     className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 dark:border-slate-800 dark:bg-[#0c1f3d] dark:text-white"
                   />
                 </div>
@@ -460,11 +544,11 @@ export default function AdminPage() {
                     onChange={(e) => setRoleFilter(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-purple-500 dark:border-slate-800 dark:bg-[#0c1f3d] dark:text-slate-200"
                   >
-                    <option value="all">All Roles</option>
-                    <option value="parent">Parent</option>
-                    <option value="doctor">Doctor</option>
-                    <option value="child">Child</option>
-                    <option value="admin">Admin</option>
+                    <option value="ALL">All Roles</option>
+                    <option value="PARENT">Parents</option>
+                    <option value="CHILD">Children</option>
+                    <option value="DOCTOR">Doctors</option>
+                    <option value="ADMIN">Admins</option>
                   </select>
                 </div>
 
@@ -475,10 +559,10 @@ export default function AdminPage() {
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-purple-500 dark:border-slate-800 dark:bg-[#0c1f3d] dark:text-slate-200"
                   >
-                    <option value="all">All Statuses</option>
+                    <option value="ALL">All Statuses</option>
                     <option value="Active">Active</option>
                     <option value="Suspended">Suspended</option>
-                    <option value="Pending">Pending</option>
+                    <option value="Flagged">Flagged</option>
                   </select>
                 </div>
               </div>
@@ -493,19 +577,25 @@ export default function AdminPage() {
                         <th className="px-5 py-3.5">Role</th>
                         <th className="px-5 py-3.5">Status</th>
                         <th className="px-5 py-3.5">Plan</th>
-                        <th className="px-5 py-3.5">Joined</th>
+                        <th className="px-5 py-3.5">Last Active</th>
                         <th className="px-5 py-3.5 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                      {filteredUsers.length === 0 ? (
+                      {loading ? (
+                        <tr>
+                          <td colSpan={6} className="p-8 text-center text-slate-400">
+                            Loading users from backend...
+                          </td>
+                        </tr>
+                      ) : users.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="p-8 text-center text-slate-400">
                             No users match the search criteria.
                           </td>
                         </tr>
                       ) : (
-                        filteredUsers.map((user) => (
+                        users.map((user) => (
                           <tr key={user.id} className="transition hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
                             <td className="px-5 py-3.5 font-medium text-slate-900 dark:text-white">
                               <div className="flex flex-col">
@@ -517,13 +607,14 @@ export default function AdminPage() {
                             <td className="px-5 py-3.5">
                               <select
                                 value={user.role}
-                                onChange={(e) => updateUserRole(user.id, e.target.value as UserRole)}
+                                disabled={updatingUser === user.id}
+                                onChange={(e) => handleUpdateRole(user.id, e.target.value as SystemUser["role"])}
                                 className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 outline-none hover:border-purple-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                               >
-                                <option value="parent">Parent</option>
-                                <option value="doctor">Doctor</option>
-                                <option value="child">Child</option>
-                                <option value="admin">Admin</option>
+                                <option value="PARENT">PARENT</option>
+                                <option value="DOCTOR">DOCTOR</option>
+                                <option value="CHILD">CHILD</option>
+                                <option value="ADMIN">ADMIN</option>
                               </select>
                             </td>
 
@@ -537,11 +628,6 @@ export default function AdminPage() {
                                     : "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
                                 }`}
                               >
-                                <span
-                                  className={`h-1.5 w-1.5 rounded-full ${
-                                    user.status === "Active" ? "bg-emerald-500" : user.status === "Suspended" ? "bg-red-500" : "bg-amber-500"
-                                  }`}
-                                />
                                 {user.status}
                               </span>
                             </td>
@@ -549,7 +635,8 @@ export default function AdminPage() {
                             <td className="px-5 py-3.5">
                               <select
                                 value={user.subscription}
-                                onChange={(e) => updateUserSubscription(user.id, e.target.value as any)}
+                                disabled={updatingUser === user.id}
+                                onChange={(e) => handleUpdateSubscription(user.id, e.target.value as SystemUser["subscription"])}
                                 className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 outline-none hover:border-purple-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                               >
                                 <option value="Free">Free</option>
@@ -558,29 +645,27 @@ export default function AdminPage() {
                               </select>
                             </td>
 
-                            <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400">{user.joined}</td>
+                            <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400">{user.lastActive}</td>
 
                             <td className="px-5 py-3.5 text-right">
                               <div className="flex items-center justify-end gap-2">
-                                <button
-                                  onClick={() => toggleUserStatus(user.id)}
-                                  title={user.status === "Active" ? "Suspend user access" : "Activate user access"}
-                                  className={`rounded-lg p-1.5 transition ${
-                                    user.status === "Active"
-                                      ? "bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400"
-                                      : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400"
-                                  }`}
-                                >
-                                  {user.status === "Active" ? <UserX size={15} /> : <UserCheck size={15} />}
-                                </button>
-
-                                <button
-                                  onClick={() => deleteUser(user.id)}
-                                  title="Delete user profile"
-                                  className="rounded-lg bg-slate-100 p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-600 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-red-950/40 dark:hover:text-red-300"
-                                >
-                                  <X size={15} />
-                                </button>
+                                {user.status === "Active" ? (
+                                  <button
+                                    disabled={updatingUser === user.id}
+                                    onClick={() => handleUpdateStatus(user.id, "Suspended")}
+                                    className="rounded-lg bg-red-50 p-1.5 text-red-600 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 transition text-[11px] font-bold"
+                                  >
+                                    Suspend
+                                  </button>
+                                ) : (
+                                  <button
+                                    disabled={updatingUser === user.id}
+                                    onClick={() => handleUpdateStatus(user.id, "Active")}
+                                    className="rounded-lg bg-emerald-50 p-1.5 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 transition text-[11px] font-bold"
+                                  >
+                                    Activate
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -695,11 +780,11 @@ export default function AdminPage() {
                       Infrastructure Health Check
                     </CardTitle>
                     <button
-                      onClick={runDiagnostics}
-                      disabled={isTesting}
+                      onClick={handleRunDiagnostic}
+                      disabled={isSweeping}
                       className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                     >
-                      <RefreshCw size={14} className={isTesting ? "animate-spin" : ""} />
+                      <RefreshCw size={14} className={isSweeping ? "animate-spin" : ""} />
                       Run Test
                     </button>
                   </div>
@@ -806,13 +891,13 @@ export default function AdminPage() {
                       </span>
                       <select
                         value={newRole}
-                        onChange={(e) => setNewRole(e.target.value as UserRole)}
+                        onChange={(e) => setNewRole(e.target.value as SystemUser["role"])}
                         className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-purple-500 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200"
                       >
-                        <option value="parent">Parent</option>
-                        <option value="doctor">Doctor</option>
-                        <option value="child">Child</option>
-                        <option value="admin">Admin</option>
+                        <option value="PARENT">PARENT</option>
+                        <option value="DOCTOR">DOCTOR</option>
+                        <option value="CHILD">CHILD</option>
+                        <option value="ADMIN">ADMIN</option>
                       </select>
                     </label>
 
@@ -822,7 +907,7 @@ export default function AdminPage() {
                       </span>
                       <select
                         value={newSub}
-                        onChange={(e) => setNewSub(e.target.value as any)}
+                        onChange={(e) => setNewSub(e.target.value as SystemUser["subscription"])}
                         className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-purple-500 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200"
                       >
                         <option value="Free">Free</option>

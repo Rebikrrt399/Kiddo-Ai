@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export interface ParentingVideo {
+interface ParentingVideo {
   id: string;
   title: string;
   subtitle: string;
@@ -19,7 +19,7 @@ export interface ParentingVideo {
   summary: string[];
 }
 
-export const PARENTING_VIDEOS: ParentingVideo[] = [
+const PARENTING_VIDEOS: ParentingVideo[] = [
   {
     id: "v1",
     title: "Can You BREAK Your Screen Addiction of your CHILD?",
@@ -30,11 +30,11 @@ export const PARENTING_VIDEOS: ParentingVideo[] = [
     stars: 4.9,
     reviews: 480,
     author: "Dr. Sweta Adatia @drsweta.adatiahindi",
-    youtubeId: "Kk6N31XG_t8",
-    youtubeUrl: "https://www.youtube.com/results?search_query=" + encodeURIComponent("Can You BREAK Your Screen Addiction of your CHILD Dr Sweta Adatia"),
-    directWatchUrl: "https://www.youtube.com/watch?v=Kk6N31XG_t8",
-    thumbnailUrl: "/thumbnails/video1.jpg",
-    embedUrl: "https://www.youtube-nocookie.com/embed/Kk6N31XG_t8",
+    youtubeId: "IJ8E2-XNPqg",
+    youtubeUrl: "https://www.youtube.com/watch?v=IJ8E2-XNPqg",
+    directWatchUrl: "https://www.youtube.com/watch?v=IJ8E2-XNPqg",
+    thumbnailUrl: "https://img.youtube.com/vi/IJ8E2-XNPqg/hqdefault.jpg",
+    embedUrl: "https://www.youtube-nocookie.com/embed/IJ8E2-XNPqg",
     gradient: "from-blue-600 via-indigo-600 to-purple-600",
     summary: [
       "Children mirror adult device habits: parents must model healthy digital boundaries at home.",
@@ -52,11 +52,11 @@ export const PARENTING_VIDEOS: ParentingVideo[] = [
     stars: 4.9,
     reviews: 620,
     author: "Med School Insiders",
-    youtubeId: "0hN9M5Pj020",
-    youtubeUrl: "https://www.youtube.com/results?search_query=" + encodeURIComponent("How to Manage Stress as a Student Med School Insiders"),
-    directWatchUrl: "https://www.youtube.com/watch?v=0hN9M5Pj020",
-    thumbnailUrl: "/thumbnails/video2.jpg",
-    embedUrl: "https://www.youtube-nocookie.com/embed/0hN9M5Pj020",
+    youtubeId: "Bk2-dKH2Ta4",
+    youtubeUrl: "https://www.youtube.com/watch?v=Bk2-dKH2Ta4",
+    directWatchUrl: "https://www.youtube.com/watch?v=Bk2-dKH2Ta4",
+    thumbnailUrl: "https://img.youtube.com/vi/Bk2-dKH2Ta4/hqdefault.jpg",
+    embedUrl: "https://www.youtube-nocookie.com/embed/Bk2-dKH2Ta4",
     gradient: "from-purple-600 via-pink-600 to-red-600",
     summary: [
       "Understand the Yerkes-Dodson curve: optimize mild motivation while stopping chronic distress.",
@@ -74,11 +74,11 @@ export const PARENTING_VIDEOS: ParentingVideo[] = [
     stars: 4.8,
     reviews: 350,
     author: "Abhasa - Mental Health",
-    youtubeId: "nO2Xf0V7_X4",
-    youtubeUrl: "https://www.youtube.com/results?search_query=" + encodeURIComponent("Stop Copying Morning Routines Do This Instead Abhasa Mental Health"),
-    directWatchUrl: "https://www.youtube.com/watch?v=nO2Xf0V7_X4",
-    thumbnailUrl: "/thumbnails/video3.jpg",
-    embedUrl: "https://www.youtube-nocookie.com/embed/nO2Xf0V7_X4",
+    youtubeId: "hHmw32DML-s",
+    youtubeUrl: "https://www.youtube.com/watch?v=hHmw32DML-s",
+    directWatchUrl: "https://www.youtube.com/watch?v=hHmw32DML-s",
+    thumbnailUrl: "https://img.youtube.com/vi/hHmw32DML-s/hqdefault.jpg",
+    embedUrl: "https://www.youtube-nocookie.com/embed/hHmw32DML-s",
     gradient: "from-emerald-600 via-teal-600 to-cyan-600",
     summary: [
       "Avoid unrealistic 10-step influencer routines that trigger early morning cortisol spikes.",
