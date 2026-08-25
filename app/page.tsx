@@ -91,6 +91,12 @@ export default function LandingPage() {
               Child App
             </Link>
             <Link 
+              href="/doctor" 
+              className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 px-4 py-1.5 font-semibold text-xs transition"
+            >
+              Doctor
+            </Link>
+            <Link 
               href="/admin" 
               className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 px-4 py-1.5 font-semibold text-xs transition"
             >

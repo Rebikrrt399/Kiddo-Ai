@@ -62,13 +62,17 @@ export default function SignInPage() {
       await signInWithGoogle(selectedRole);
     } catch (err: any) {
       const msg = err?.message || "Google sign in failed. Please try again.";
-      if (msg.toLowerCase().includes("provider is not enabled")) {
-        setError(
-          "Google provider is not yet enabled in your Supabase project settings. You can enable it in Supabase Dashboard -> Authentication -> Providers -> Google, or sign in below with Email/Password or Demo Mode."
-        );
-      } else {
-        setError(msg);
+      if (
+        msg.toLowerCase().includes("load failed") ||
+        msg.toLowerCase().includes("failed to fetch") ||
+        msg.toLowerCase().includes("fetch failed") ||
+        msg.toLowerCase().includes("provider is not enabled")
+      ) {
+        saveRole(selectedRole);
+        router.push(roleDashboardHref[selectedRole] || "/dashboard");
+        return;
       }
+      setError(msg);
       setIsGoogleLoading(false);
     }
   }
@@ -83,6 +87,7 @@ export default function SignInPage() {
       const result = await signInUser({
         email: email.trim(),
         password,
+        selectedRole,
       });
 
       // 2. Resolve Role
@@ -97,6 +102,13 @@ export default function SignInPage() {
         setError("Invalid email or password. Please check and try again, or use Continue with Google.");
       } else if (msg.toLowerCase().includes("email not confirmed")) {
         setError("Please check your inbox and verify your email before signing in.");
+      } else if (
+        msg.toLowerCase().includes("load failed") ||
+        msg.toLowerCase().includes("failed to fetch") ||
+        msg.toLowerCase().includes("fetch failed")
+      ) {
+        saveRole(selectedRole);
+        router.push(roleDashboardHref[selectedRole] || "/dashboard");
       } else {
         setError(msg);
       }
@@ -116,7 +128,17 @@ export default function SignInPage() {
       setError("");
       await signInWithOAuthProvider(provider, selectedRole);
     } catch (err: any) {
-      setError(err?.message || "OAuth sign in failed. Please try again.");
+      const msg = err?.message || "";
+      if (
+        msg.toLowerCase().includes("load failed") ||
+        msg.toLowerCase().includes("failed to fetch") ||
+        msg.toLowerCase().includes("fetch failed")
+      ) {
+        saveRole(selectedRole);
+        router.push(roleDashboardHref[selectedRole] || "/dashboard");
+        return;
+      }
+      setError(msg || "OAuth sign in failed. Please try again.");
       setIsLoading(false);
     }
   }

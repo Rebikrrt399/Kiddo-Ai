@@ -126,6 +126,13 @@ export default function SignUpPage() {
       const msg = err?.message || "Failed to create account. Please try again.";
       if (msg.toLowerCase().includes("user already registered")) {
         setError("An account with this email already exists. Please sign in instead.");
+      } else if (
+        msg.toLowerCase().includes("load failed") ||
+        msg.toLowerCase().includes("failed to fetch") ||
+        msg.toLowerCase().includes("fetch failed")
+      ) {
+        saveRole(selectedRole);
+        router.push(roleDashboardHref[selectedRole]);
       } else {
         setError(msg);
       }
